@@ -97,6 +97,20 @@
         </div>
       </div>
 
+      <!-- Optional Willingness to Pay -->
+      <div class="form-group">
+        <label for="willingness_to_pay" class="form-label">Estimated Budget / Willingness to Pay (Optional)</label>
+        <input 
+          type="text" 
+          id="willingness_to_pay" 
+          name="willingness_to_pay" 
+          class="form-control" 
+          placeholder="e.g., $15 - $25 / month, $40 / lesson, standard market pricing" 
+          value="{{ form_data.willingness_to_pay if form_data else '' }}"
+        >
+        <p class="form-hint">Provides local entrepreneurs with realistic price expectations (distinct from support votes).</p>
+      </div>
+
       <!-- Description -->
       <div class="form-group">
         <label for="description" class="form-label">Why is this needed? Describe the current struggle <span class="req">*</span></label>
