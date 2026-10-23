@@ -1,26 +1,24 @@
 {% extends 'base.html' %}
 
-{% block title %}Community Validation Feed | NOTYET{% endblock %}
+{% block title %}Community Validation Hub | NOTYET{% endblock %}
+
+{% block head_extra %}
+  <!-- Isolated Feature 3 Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/validation.css') }}">
+{% endblock %}
 
 {% block content %}
 <section class="section-spacing" style="margin-top: 1rem;">
-  <!-- Team Collaboration Scaffold Notice -->
-  <div class="roadmap-box">
-    <div class="roadmap-icon">👍</div>
-    <div class="roadmap-content">
-      <h4>Feature 3 Starter Scaffold: "Community Validation"</h4>
-      <p>
-        <strong>For the teammate building Feature 3:</strong> This feed renders all open needs from SQLite and includes a working validation action (<code>POST /validate/&lt;id&gt;</code>).
-        You can expand it with search indexing, sorting toggles (Most Validated, Newest), interactive comment threads, or anti-spam verification.
-      </p>
-    </div>
-  </div>
 
+  <!-- Data Bridge for Duplicate Vote Prevention -->
+  <div id="userValidatedIds" data-ids="{{ user_validated_ids|tojson }}" style="display:none;" aria-hidden="true"></div>
+
+  <!-- Header Banner -->
   <div class="section-header">
     <div class="section-title-wrap">
       <h1>Community Validation Hub</h1>
       <p class="section-subtitle">
-        Browse unmet neighbourhood requests and add your vote to validate local demand.
+        Browse unmet neighbourhood requests, validate real local demand with your vote, and tell local businesses why your area needs it.
       </p>
     </div>
     <a href="{{ url_for('report_need') }}" class="btn btn-primary btn-sm">
@@ -28,77 +26,314 @@
     </a>
   </div>
 
-  <!-- Filter & Search Bar -->
-  <form method="GET" action="{{ url_for('community_validation') }}" class="filter-bar">
-    <div class="filter-group">
-      <label for="filter-cat" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Category:</label>
-      <select id="filter-cat" name="category" class="form-control" onchange="this.form.submit()">
-        <option value="">All Categories</option>
-        {% for cat in categories %}
-          <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>
-            {{ cat.icon }} {{ cat.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+  <!-- Search, Filter & Sort Controls Bar -->
+  <div class="validation-controls-bar">
+    <form method="GET" action="{{ url_for('community_validation') }}" id="validationFilterForm">
+      <div class="controls-main-row">
+        
+        <!-- Keyword Search Input -->
+        <div class="search-input-wrapper">
+          <span class="search-input-icon">🔍</span>
+          <input 
+            type="text" 
+            name="q" 
+            id="validationSearchInput"
+            class="search-input-field" 
+            placeholder="Search by keyword, shop, service, or area..." 
+            value="{{ search_query }}"
+            autocomplete="off"
+          >
+          <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="Clear search text">&times;</button>
+        </div>
 
-    <div class="filter-group">
-      <label for="filter-neigh" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Area:</label>
-      <select id="filter-neigh" name="neighborhood" class="form-control" onchange="this.form.submit()">
-        <option value="">All Neighbourhoods</option>
-        {% for n in neighborhoods %}
-          <option value="{{ n }}" {% if selected_neighborhood == n %}selected{% endif %}>
-            {{ n }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+        <!-- Filters & Sorting Group -->
+        <div class="controls-filters-group">
+          <!-- Category Selector -->
+          <select name="category" class="control-select" onchange="this.form.submit()" aria-label="Filter by category">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+              <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>
+                {{ cat.icon }} {{ cat.name }}
+              </option>
+            {% endfor %}
+          </select>
 
-    {% if selected_category or selected_neighborhood %}
-      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary btn-sm" style="margin-left: auto;">
-        Clear Filters
-      </a>
-    {% endif %}
-  </form>
+          <!-- Neighborhood Selector -->
+          <select name="neighborhood" class="control-select" onchange="this.form.submit()" aria-label="Filter by neighborhood">
+            <option value="">All Neighbourhoods</option>
+            {% for n in neighborhoods %}
+              <option value="{{ n }}" {% if selected_neighborhood == n %}selected{% endif %}>
+                📍 {{ n }}
+              </option>
+            {% endfor %}
+          </select>
 
-  <!-- Needs Grid -->
+          <!-- Sort Criteria -->
+          <select name="sort" class="control-select" onchange="this.form.submit()" aria-label="Sort needs">
+            <option value="popular" {% if sort_by == 'popular' %}selected{% endif %}>🔥 Most Validated</option>
+            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>🕒 Newest First</option>
+            <option value="support_needed" {% if sort_by == 'support_needed' %}selected{% endif %}>🌱 Needs More Support</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Active Filter Chips (if any filter is applied) -->
+      {% if search_query or selected_category or selected_neighborhood %}
+        <div class="active-filters-row">
+          <span style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase;">Active Filters:</span>
+          
+          {% if search_query %}
+            <span class="active-filter-chip">
+              Search: "{{ search_query }}"
+              <a href="{{ url_for('community_validation', category=selected_category, neighborhood=selected_neighborhood, sort=sort_by) }}" class="chip-remove-link" title="Remove search filter">&times;</a>
+            </span>
+          {% endif %}
+
+          {% if selected_category %}
+            <span class="active-filter-chip">
+              Category: {{ selected_category }}
+              <a href="{{ url_for('community_validation', q=search_query, neighborhood=selected_neighborhood, sort=sort_by) }}" class="chip-remove-link" title="Remove category filter">&times;</a>
+            </span>
+          {% endif %}
+
+          {% if selected_neighborhood %}
+            <span class="active-filter-chip">
+              Area: {{ selected_neighborhood }}
+              <a href="{{ url_for('community_validation', q=search_query, category=selected_category, sort=sort_by) }}" class="chip-remove-link" title="Remove neighborhood filter">&times;</a>
+            </span>
+          {% endif %}
+
+          <a href="{{ url_for('community_validation') }}" class="clear-all-link">Clear All Filters</a>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Results Count Bar -->
+  <div class="results-status-bar">
+    <span>
+      Showing <span class="results-count">{{ needs|length }}</span> community need{% if needs|length != 1 %}s{% endif %}
+      {% if search_query or selected_category or selected_neighborhood %}
+        matching your criteria
+      {% endif %}
+    </span>
+    <span>
+      Sorted by: 
+      {% if sort_by == 'newest' %}
+        <strong>Newest First</strong>
+      {% elif sort_by == 'support_needed' %}
+        <strong>Needs More Support</strong>
+      {% else %}
+        <strong>Most Validated</strong>
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Needs Feed Grid -->
   {% if needs and needs|length > 0 %}
     <div class="cards-grid">
       {% for need in needs %}
-        <article class="need-card">
+        <article class="need-card validation-card" data-need-id="{{ need.id }}" data-need-title="{{ need.title }}">
           <div>
-            <div class="need-card-header">
-              <span class="category-tag">{{ need.category }}</span>
-              <span class="location-tag">📍 {{ need.neighborhood }}</span>
+            <!-- Card Header: Category, Neighborhood & Demand Tier Badge -->
+            <div class="card-top-meta">
+              <div class="tags-cluster">
+                <span class="category-tag">{{ need.category }}</span>
+                <span class="location-tag">📍 {{ need.neighborhood }}</span>
+                {% if need.zip_code %}
+                  <span class="badge-tag" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">{{ need.zip_code }}</span>
+                {% endif %}
+              </div>
+              <span class="card-demand-badge {{ need.demand_info.class_name }}">
+                {{ need.demand_info.icon }} {{ need.demand_info.label }}
+              </span>
             </div>
+
+            <!-- Title & Reporter Meta -->
             <h3 class="need-title">{{ need.title }}</h3>
+            <div style="font-size: 0.76rem; color: var(--text-dim); margin-bottom: 0.5rem;">
+              Voiced by {{ need.reporter_name if need.reporter_name else 'Neighbour' }} &bull; {{ need.created_at[:10] if need.created_at else 'Recently' }}
+            </div>
+
+            <!-- Description -->
             <p class="need-desc">{{ need.description }}</p>
+
+            <!-- Demand Milestone Progress Bar -->
+            <div class="demand-progress-box">
+              <div class="demand-progress-header">
+                <span class="progress-header-label">Community Demand</span>
+                <span class="progress-header-target">{{ need.demand_info.description }}</span>
+              </div>
+              <div class="demand-progress-track">
+                <div class="demand-progress-fill" style="width: {{ need.demand_info.percent }}%;"></div>
+              </div>
+            </div>
+
+            <!-- Neighbor Testimonials / Quotes Preview -->
+            {% set need_testimonials = validations_map.get(need.id) %}
+            {% if need_testimonials and need_testimonials.reasons and need_testimonials.reasons|length > 0 %}
+              <div class="neighbor-reasons-preview">
+                <div class="reasons-header-row">
+                  <span>💬 Neighbor Voices</span>
+                  <span>{{ need_testimonials.total_reasons }} testimonial{% if need_testimonials.total_reasons != 1 %}s{% endif %}</span>
+                </div>
+                <p class="reason-quote-snippet">
+                  "{{ need_testimonials.reasons[0].support_reason }}"
+                </p>
+                <div class="reason-supporter-meta">
+                  &mdash; {{ need_testimonials.reasons[0].supporter_name if need_testimonials.reasons[0].supporter_name else 'Neighbour' }},
+                  {{ need_testimonials.reasons[0].created_at[:10] if need_testimonials.reasons[0].created_at else 'Recently' }}
+                </div>
+                {% if need_testimonials.total_reasons > 1 %}
+                  <button type="button" class="view-stories-trigger" data-need-id="{{ need.id }}" data-need-title="{{ need.title }}">
+                    Read all {{ need_testimonials.total_reasons }} neighbor stories &rarr;
+                  </button>
+                {% endif %}
+              </div>
+            {% endif %}
           </div>
 
+          <!-- Card Footer & Validation Controls -->
           <div>
             <div class="need-card-footer">
               <span class="validation-counter">
-                <span>👍</span> {{ need.validation_count }} validations
+                <span>👍</span> <strong class="validation-counter-val">{{ need.validation_count }}</strong> validations
               </span>
-              
-              <form action="{{ url_for('validate_need_action', need_id=need.id) }}" method="POST" style="margin: 0;">
+            </div>
+
+            <div class="card-actions-row">
+              <!-- Quick +1 Form -->
+              <form action="{{ url_for('validate_need_action', need_id=need.id) }}" method="POST" class="form-quick-validate" data-need-id="{{ need.id }}" style="flex: 1; margin: 0;">
                 <input type="hidden" name="supporter_name" value="Neighbourhood Resident">
-                <button type="submit" class="btn btn-outline btn-sm">
-                  +1 I Need This Too
+                <button 
+                  type="submit" 
+                  class="btn btn-outline btn-sm btn-validate-main {% if need.id in user_validated_ids %}btn-already-validated{% endif %}"
+                  {% if need.id in user_validated_ids %}disabled aria-disabled="true"{% endif %}
+                >
+                  {% if need.id in user_validated_ids %}
+                    <span>✓</span> Validated by You
+                  {% else %}
+                    <span>👍</span> +1 I Need This Too
+                  {% endif %}
                 </button>
               </form>
+
+              <!-- Voice Reason Button (Opens Modal) -->
+              <button 
+                type="button" 
+                class="btn-validate-comment btn-open-reason-modal"
+                title="Add your personal reason / voice your struggle"
+                {% if need.id in user_validated_ids %}style="opacity: 0.5;"{% endif %}
+              >
+                <span>💬 Voice Reason</span>
+              </button>
             </div>
           </div>
         </article>
       {% endfor %}
     </div>
   {% else %}
+    <!-- Empty State -->
     <div class="empty-box">
       <div class="empty-box-icon">🔍</div>
       <h3>No Needs Match Your Filter</h3>
-      <p>Try resetting the category or neighbourhood filter to see more community requests.</p>
-      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary">Reset Filters</a>
+      <p>
+        {% if search_query %}
+          No community requests matching "<strong>{{ search_query }}</strong>".
+        {% else %}
+          There are currently no open requests in this category or neighbourhood.
+        {% endif %}
+      </p>
+      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary">
+        Reset All Filters
+      </a>
     </div>
   {% endif %}
+
 </section>
+
+<!-- ==========================================
+     MODAL 1: ADD VALIDATION & PERSONAL REASON
+     ========================================== -->
+<div class="validation-modal-backdrop" id="validationReasonModal" role="dialog" aria-modal="true" aria-labelledby="modalNeedTitleText">
+  <div class="validation-modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Validate Community Need</h3>
+        <p class="modal-subtitle" id="modalNeedTitleText">Need Title</p>
+      </div>
+      <button type="button" class="modal-close-btn" aria-label="Close modal">&times;</button>
+    </div>
+
+    <form id="modalValidationForm">
+      <input type="hidden" id="modalNeedId" name="need_id" value="">
+      
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 1.1rem;">
+          <label for="modalSupporterName" class="form-label">Your Name or Alias (Optional)</label>
+          <input 
+            type="text" 
+            id="modalSupporterName" 
+            name="supporter_name" 
+            class="form-control" 
+            placeholder="e.g. Resident on 4th Ave, Parent of 2, Marcus"
+          >
+          <p class="form-hint">You can remain anonymous or use a neighborhood alias.</p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+          <label for="modalSupportReason" class="form-label">Why do you need this in your neighborhood? <span class="req">*</span></label>
+          <textarea 
+            id="modalSupportReason" 
+            name="support_reason" 
+            class="form-control" 
+            rows="3" 
+            placeholder="e.g., The closest pharmacy is a 20-minute drive away. When my kids get sick at night, having one nearby would make a huge difference."
+            required
+          ></textarea>
+          <p class="form-hint">Real human stories convince local entrepreneurs and founders to invest and open here!</p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm modal-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          <span>👍</span> +1 Submit Validation &amp; Reason
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL 2: VIEW ALL NEIGHBOR STORIES
+     ========================================== -->
+<div class="validation-modal-backdrop" id="storiesModal" role="dialog" aria-modal="true" aria-labelledby="storiesModalNeedTitle">
+  <div class="validation-modal-card">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Neighbor Testimonials &amp; Reasons</h3>
+        <p class="modal-subtitle" id="storiesModalNeedTitle">Need Title</p>
+      </div>
+      <button type="button" class="modal-close-btn" aria-label="Close modal">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="stories-list" id="storiesModalList">
+        <!-- Rendered dynamically via fetch -->
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm modal-cancel-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+  <!-- Isolated Feature 3 Script -->
+  <script src="{{ url_for('static', filename='js/validation.js') }}"></script>
 {% endblock %}
