@@ -4,18 +4,6 @@
 
 {% block content %}
 <section class="section-spacing" style="margin-top: 1rem;">
-  <!-- Team Collaboration Scaffold Notice -->
-  <div class="roadmap-box">
-    <div class="roadmap-icon">🛠️</div>
-    <div class="roadmap-content">
-      <h4>Feature 2 Starter Scaffold: "Report a Need"</h4>
-      <p>
-        <strong>For the teammate building Feature 2:</strong> This form connects directly to SQLite via <code>/report</code> in <code>app.py</code>. 
-        You can expand it with image uploads, map pins, urgency sliders, or validation rules.
-      </p>
-    </div>
-  </div>
-
   <div class="form-card">
     <div style="text-align: center; margin-bottom: 2rem;">
       <h1 style="font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">
@@ -37,9 +25,11 @@
           class="form-control" 
           placeholder="e.g., Late-night walk-in pharmacy, Fresh organic grocery store" 
           required 
+          minlength="5"
+          maxlength="100"
           value="{{ form_data.title if form_data else '' }}"
         >
-        <p class="form-hint">Summarize the missing store or service in one clear sentence.</p>
+        <p class="form-hint">Summarize the missing store or service in one clear sentence (5–100 characters).</p>
       </div>
 
       <!-- Category & Neighborhood Row -->
@@ -120,8 +110,10 @@
           class="form-control" 
           placeholder="Explain what residents currently have to do (e.g., drive 20 minutes away, pay high delivery fees) and who benefits most..." 
           required
+          minlength="20"
+          maxlength="1000"
         >{{ form_data.description if form_data else '' }}</textarea>
-        <p class="form-hint">Specific details help neighbors validate and help local businesses see the commercial opportunity.</p>
+        <p class="form-hint">Specific details help neighbors validate and help local businesses see the commercial opportunity (20–1,000 characters).</p>
       </div>
 
       <!-- Submit button -->

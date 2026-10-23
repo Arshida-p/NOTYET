@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Browse Community Needs | NOTYET{% endblock %}
+
+{% block content %}
+<section class="section-spacing" style="margin-top: 1rem;">
+  <!-- Section Header -->
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <span class="section-eyebrow">COMMUNITY DEMAND DIRECTORY</span>
+      <h1>Browse Community Needs</h1>
+      <p class="section-subtitle">
+        Explore what residents are missing across neighbourhoods, and discover verified local community demand.
+      </p>
+    </div>
+    <div class="section-header-actions">
+      <a href="{{ url_for('report_need') }}" class="btn btn-primary btn-sm">
+        <span>+</span> Report a Need
+      </a>
+      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary btn-sm">
+        <span>👍</span> Validation Hub
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <form method="GET" action="{{ url_for('browse_needs') }}" class="filter-bar">
+    <!-- Keyword Search Query -->
+    <div class="filter-group" style="flex: 1.5; min-width: 220px;">
+      <label for="filter-search" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Search:</label>
+      <input 
+        type="text" 
+        id="filter-search" 
+        name="q" 
+        class="form-control" 
+        style="padding: 0.55rem 0.85rem; font-size: 0.88rem;" 
+        placeholder="Keyword, need, or district..." 
+        value="{{ search_query }}"
+      >
+    </div>
+
+    <!-- Category Filter -->
+    <div class="filter-group">
+      <label for="filter-cat" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Category:</label>
+      <select id="filter-cat" name="category" class="form-control" style="padding: 0.55rem 0.85rem; font-size: 0.88rem;" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>
+            {{ cat.icon }} {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Neighbourhood Area Filter -->
+    <div class="filter-group">
+      <label for="filter-neigh" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Area:</label>
+      <select id="filter-neigh" name="neighborhood" class="form-control" style="padding: 0.55rem 0.85rem; font-size: 0.88rem;" onchange="this.form.submit()">
+        <option value="">All Areas</option>
+        {% for n in neighborhoods %}
+          <option value="{{ n }}" {% if selected_neighborhood == n %}selected{% endif %}>
+            📍 {{ n }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Need Status Filter -->
+    <div class="filter-group" style="max-width: 180px;">
+      <label for="filter-status" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Status:</label>
+      <select id="filter-status" name="status" class="form-control" style="padding: 0.55rem 0.85rem; font-size: 0.88rem;" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="open" {% if selected_status == 'open' %}selected{% endif %}>Open</option>
+        <option value="in_discussion" {% if selected_status == 'in_discussion' %}selected{% endif %}>In Discussion</option>
+        <option value="met" {% if selected_status == 'met' %}selected{% endif %}>Need Met</option>
+      </select>
+    </div>
+
+    <!-- Submit & Clear Controls -->
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.55rem 1rem;">
+        Filter
+      </button>
+      {% if selected_category or selected_neighborhood or selected_status or search_query %}
+        <a href="{{ url_for('browse_needs') }}" class="btn btn-secondary btn-sm" style="padding: 0.55rem 0.85rem;">
+          Clear
+        </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Results Count Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+    <span>
+      Showing <strong style="color: #fff;">{{ needs|length }}</strong> 
+      {% if needs|length == 1 %}community need{% else %}community needs{% endif %}
+      {% if selected_category or selected_neighborhood or selected_status or search_query %}
+        matching your filter
+      {% endif %}
+    </span>
+    {% if total_count > 0 %}
+      <span style="font-size: 0.82rem; color: var(--text-dim);">
+        {{ total_count }} total recorded across all neighbourhoods
+      </span>
+    {% endif %}
+  </div>
+
+  <!-- Needs Cards Grid -->
+  {% if needs and needs|length > 0 %}
+    <div class="cards-grid">
+      {% for need in needs %}
+        <article class="need-card" id="need-{{ need.id }}">
+          <div>
+            <!-- Card Header: Category & Location -->
+            <div class="need-card-header">
+              <span class="category-tag">
+                {{ category_icons.get(need.category, '📌') }} {{ need.category }}
+              </span>
+              <span class="location-tag">
+                📍 {{ need.neighborhood }}
+                {% if need.zip_code %}
+                  <span style="color: var(--text-dim); font-size: 0.78rem;">({{ need.zip_code }})</span>
+                {% endif %}
+              </span>
+            </div>
+
+            <!-- Need Title & Description -->
+            <h3 class="need-title">{{ need.title }}</h3>
+            <p class="need-desc">{{ need.description }}</p>
+          </div>
+
+          <div>
+            <!-- Status & Reporter Meta Information -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; font-size: 0.82rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+              <!-- Status Badge (Requirement 2) -->
+              {% if need.status == 'open' %}
+                <span class="status-badge status-open" title="Status: Open for validation">
+                  <span class="status-dot"></span> Open Need
+                </span>
+              {% elif need.status == 'in_discussion' %}
+                <span class="status-badge status-in_discussion" title="Status: In discussion with local entrepreneurs">
+                  <span class="status-dot"></span> In Discussion
+                </span>
+              {% elif need.status == 'met' %}
+                <span class="status-badge status-met" title="Status: Unmet need has been fulfilled">
+                  <span class="status-dot"></span> Need Met
+                </span>
+              {% else %}
+                <span class="status-badge" style="background: rgba(255,255,255,0.08); color: #d1d5db;">
+                  {{ need.status|capitalize }}
+                </span>
+              {% endif %}
+
+              <!-- Reporter Meta -->
+              <span style="display: inline-flex; align-items: center; gap: 0.3rem;" title="Reported by {{ need.reporter_name }}">
+                <span style="color: var(--text-dim);">By:</span> {{ need.reporter_name if need.reporter_name else 'Anonymous Resident' }}
+              </span>
+            </div>
+
+            <!-- Card Footer: Upvote Action & Validation Count -->
+            <div class="need-card-footer">
+              <span class="validation-counter" title="{{ need.validation_count }} neighbours validated this need">
+                <span>👍</span> {{ need.validation_count }} {{ 'validation' if need.validation_count == 1 else 'validations' }}
+              </span>
+
+              <form action="{{ url_for('validate_need_action', need_id=need.id) }}" method="POST" style="margin: 0;">
+                <input type="hidden" name="supporter_name" value="Community Member">
+                <button type="submit" class="btn btn-outline btn-sm need-support-btn" title="Add your validation vote to this need">
+                  +1 I Need This Too
+                </button>
+              </form>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Graceful Empty State (Requirement 6) -->
+    <div class="empty-box">
+      <div class="empty-box-icon">🌱</div>
+      {% if selected_category or selected_neighborhood or selected_status or search_query %}
+        <h3>No Community Needs Found</h3>
+        <p>No community needs matched your current search or filter criteria. Try resetting or broadening your filters.</p>
+        <a href="{{ url_for('browse_needs') }}" class="btn btn-secondary">Clear All Filters</a>
+      {% else %}
+        <h3>No Community Needs Reported Yet</h3>
+        <p>The community needs directory is currently empty. Be the very first neighbour to voice what is missing in your area!</p>
+        <a href="{{ url_for('report_need') }}" class="btn btn-primary">Report a Need Now</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
