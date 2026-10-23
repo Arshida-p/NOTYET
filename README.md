@@ -2,129 +2,158 @@
 
 > **Discover what your neighbourhood is missing. Empower local businesses to fill the gap.**
 
-NOTYET is a hackathon web application that bridges the gap between everyday community needs and local entrepreneurial opportunities. Residents highlight and validate the shops, clinics, services, and amenities missing in their neighborhood, giving local entrepreneurs and small businesses verified customer demand before launching.
+NOTYET is a community-driven demand intelligence web application that bridges the gap between everyday resident needs and local entrepreneurial opportunities. Residents highlight and validate the shops, clinics, services, and amenities missing in their neighborhood, giving local entrepreneurs and small businesses verified customer demand before launching.
 
 ---
 
 ## 📁 Project Folder Structure
 
 ```text
-NotYet/
-├── app.py                     # Main Flask application & planned route handlers
-├── database.py                # Safe SQLite connection pool & idempotent schema init
+NOTYET/
+├── app.py                     # Main Flask application & route controllers
+├── database.py                # Safe SQLite connection pool & idempotent schema initialization
 ├── schema.sql                 # Database table definitions (CREATE TABLE IF NOT EXISTS)
 ├── requirements.txt           # Python dependencies (Flask)
-├── README.md                  # Beginner-friendly documentation & Windows setup guide
+├── .env.example               # Safe environment variable configuration template
+├── .gitignore                 # Excludes local databases, caches, venvs, and secrets
+├── README.md                  # Comprehensive setup & project documentation
 │
 ├── static/
 │   ├── css/
-│   │   └── style.css          # Shared modern design system (variables, cards, forms, nav)
+│   │   └── style.css          # Shared modern design system (dark mode, glassmorphism, cards)
 │   └── js/
-│       └── main.js            # Responsive mobile navbar & notification dismissals
+│       └── main.js            # Responsive mobile navbar & alert dismissal micro-interactions
 │
 └── templates/
-    ├── base.html              # Shared HTML layout (responsive nav, alerts, container, footer)
-    ├── index.html             # Feature 1: Homepage (hero, live stats, pillars, recent needs)
-    ├── report.html            # Feature 2 (Scaffold): Report a missing community need
-    ├── validation.html        # Feature 3 (Scaffold): Community voting & validation feed
-    └── opportunities.html     # Feature 4 (Scaffold): Local business market demand intelligence
+    ├── base.html              # Shared layout (responsive navigation, alerts, footer)
+    ├── index.html             # Feature 1: Homepage (hero, dynamic metrics, recent needs)
+    ├── needs.html             # Feature: Browse Community Needs (filters, search, status tags)
+    ├── report.html            # Feature 2: Report an unmet community need form
+    ├── validation.html        # Feature 3: Community voting & demand validation hub
+    └── opportunities.html     # Feature 4: Local business market demand intelligence
 ```
 
 ---
 
-## 🚀 How to Run on Windows (Beginner-Friendly)
+## ✨ Core Features
+
+1. **Homepage (`/`)**: Welcoming discovery hub with real-time aggregate metrics dynamically queried from SQLite (total needs recorded, active neighbourhoods, community validations), 3-step workflow, and recent community reports.
+2. **Browse Community Needs (`/needs`, `/browse`)**: Full directory of community requests with responsive cards showing title, description, category icon, neighbourhood area, validation count, and color-coded status badges (`Open Need`, `In Discussion`, `Need Met`). Includes multi-parameter filtering:
+   - **Keyword Search**: Filter by title or description query (`?q=...`)
+   - **Category Filter**: Filter by service domain (`?category=...`)
+   - **Neighbourhood Filter**: Filter by district or town (`?neighborhood=...`)
+   - **Status Filter**: Filter by `open`, `in_discussion`, or `met` (`?status=...`)
+   - **Graceful Empty State**: Helpful reset controls and empty state prompts when zero records match.
+3. **Report a Need (`/report`)**: Frictionless form allowing residents to submit missing services, stores, or amenities with input validation (title, category, neighbourhood, zip code, reporter alias, description).
+4. **Community Validation (`/validation`)**: Upvoting feed (`POST /validate/<id>`) allowing neighbours to add "+1 I Need This Too", increasing local civic demand visibility.
+5. **Business Opportunities (`/opportunities`)**: Aggregated commercial demand signals, market demand by category breakdown, and direct business lead registration for local entrepreneurs.
+
+---
+
+## 🚀 Quickstart & Setup Guide
 
 ### Prerequisites
-Make sure you have **Python 3.10+** installed on your Windows machine. You can verify this by opening **PowerShell** or **Command Prompt** and typing:
-```powershell
-python --version
-```
-
-### Option A: Quickstart (Direct Run)
-
-1. Open **Command Prompt** or **PowerShell** in the `NotYet` folder:
-   ```powershell
-   cd c:\Users\dell\OneDrive\Desktop\NotYet
-   ```
-
-2. Install dependencies:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-3. Start the application:
-   ```powershell
-   python app.py
-   ```
-
-4. Open your browser and visit:
-   ```text
-   http://127.0.0.1:5000
-   ```
+- **Python 3.10+** installed on your system. Verify with:
+  ```bash
+  python --version
+  ```
 
 ---
 
-### Option B: Using a Virtual Environment (Recommended Practice)
+### Step 1: Clone the Repository
 
-Creating a virtual environment ensures your project dependencies don't interfere with other Python tools on your PC:
+```bash
+git clone https://github.com/<your-username>/NOTYET.git
+cd NOTYET
+```
 
-1. Create a virtual environment named `venv`:
-   ```powershell
-   python -m venv venv
-   ```
+---
 
-2. Activate the virtual environment:
-   * **In PowerShell:**
-     ```powershell
-     .\venv\Scripts\Activate.ps1
-     ```
-     *(If PowerShell displays an execution policy error, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once)*
-   * **In Command Prompt (cmd.exe):**
-     ```cmd
-     venv\Scripts\activate.bat
-     ```
+### Step 2: Create & Activate a Virtual Environment
 
-3. Install requirements inside the environment:
-   ```powershell
-   pip install -r requirements.txt
-   ```
+Creating an isolated virtual environment is recommended:
 
-4. Run the app:
-   ```powershell
-   python app.py
-   ```
+- **Windows (PowerShell):**
+  ```powershell
+  python -m venv venv
+  .\venv\Scripts\Activate.ps1
+  ```
+  *(If PowerShell displays an execution policy error, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once)*
+
+- **Windows (Command Prompt):**
+  ```cmd
+  python -m venv venv
+  venv\Scripts\activate.bat
+  ```
+
+- **macOS / Linux:**
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
+  ```
+
+---
+
+### Step 3: Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### Step 4: Configure Environment (Optional)
+
+Copy the example environment file to configure local settings:
+
+- **Windows:**
+  ```cmd
+  copy .env.example .env
+  ```
+- **macOS / Linux:**
+  ```bash
+  cp .env.example .env
+  ```
+
+---
+
+### Step 5: Run the Application
+
+```bash
+python app.py
+```
+
+Open your browser and navigate to:
+```text
+http://127.0.0.1:5000
+```
 
 ---
 
 ## 🛡️ Safe Database Design (Zero Data Loss)
 
-- The database file `notyet.db` is automatically created on first run.
-- **Idempotent by design**: All tables use `CREATE TABLE IF NOT EXISTS`. Restarting or re-running `database.py` **never deletes or drops existing records**.
-- You can manually re-run safe database initialization anytime via:
-  ```powershell
+- **Automatic SQLite Initialization**: The local database file `notyet.db` is automatically created on first launch if it does not exist.
+- **Idempotent by Design**: All table definitions in `schema.sql` utilize `CREATE TABLE IF NOT EXISTS`. Restarting or re-running the application **never deletes, drops, or overwrites existing records**.
+- **Starter Data**: Initial seed needs are only inserted if the `needs` table is completely empty (count = 0).
+- **Git Excluded**: `notyet.db` is strictly excluded in `.gitignore` to prevent database merge conflicts and keep local test records private.
+- **Manual Safe Initialization CLI**:
+  ```bash
   flask --app app init-db
   ```
-- **No fake statistics**: Aggregate numbers (Needs count, Active neighborhoods, Neighbor validations) are dynamically computed via direct SQL queries against real user records.
 
 ---
 
-## 🗺️ Feature Roadmap & Team Collaboration
+## 🎨 Design System & Aesthetics
 
-The shared foundation provides pre-built routes, database models, and starter templates for all 4 features:
-
-| Feature | Route | Lead Focus / Expansion Points |
-| :--- | :--- | :--- |
-| **1. Homepage** | `/` | Welcoming hero, dynamic stats bar, and live community need cards. |
-| **2. Report a Need** | `/report` | Form submission (`POST /report`), category selection, description, and area input. Ready for photo uploads or geolocation tags. |
-| **3. Community Validation** | `/validation` | Upvoting (`POST /validate/<id>`), category/area filtering, and neighbor verification. Ready for comments and discussion threads. |
-| **4. Business Opportunities** | `/opportunities` | Translates validated demand into market signals for local business owners. Ready for revenue estimates, PDF reports, and direct business lead registration. |
+- **Color Tokens**: Dark slate backgrounds (`--bg-dark: #090d16`, `--bg-card: #182238`), vibrant mint-teal accents (`--accent-teal: #10b981`), violet accents (`--accent-indigo: #6366f1`), and amber validation pills (`--accent-amber: #f59e0b`).
+- **Typography**: Google Fonts `Plus Jakarta Sans` for titles and `Inter` for interface elements and reading copy.
+- **Components**: Reusable card grid (`.cards-grid`), need cards (`.need-card`), status badges (`.status-badge`), filter bars (`.filter-bar`), and empty states (`.empty-box`).
+- **Responsive**: Fully responsive flexbox and CSS Grid layout with mobile navigation toggle (`main.js`).
 
 ---
 
-## 🎨 Shared Styling Conventions (`static/css/style.css`)
+## 🔒 Security Best Practices
 
-All components share a consistent modern design system:
-- **Color Tokens**: Dark slate backgrounds (`--bg-dark`, `--bg-card`), vibrant mint-teal accents (`--accent-teal`), violet highlights (`--accent-indigo`), and amber validation pills (`--accent-amber`).
-- **Typography**: Google Fonts `Plus Jakarta Sans` for headers and `Inter` for body copy.
-- **Components**: `.btn`, `.need-card`, `.form-card`, `.metric-card`, `.badge-tag`, `.filter-bar`.
-- **Responsive**: Flexbox and CSS Grid layouts that automatically adjust between mobile and desktop screens.
+- **Parameterized Queries**: All database lookups (including search queries and multi-filter criteria) use parameterized SQL placeholders (`?`) to prevent SQL injection.
+- **Secrets Isolation**: Application secret keys are read from environment variables (`SECRET_KEY`) with a fallback for local development. Real secrets are never hardcoded or committed to version control.
+- **Input Sanitization**: Length validation and category taxonomy checks protect form submissions.

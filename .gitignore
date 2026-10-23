@@ -1,7 +1,57 @@
+# ==========================================
+# NOTYET - Git Ignore Rules
+# ==========================================
+
+# 1. Byte-compiled / optimized / C-extensions
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+
+# 2. Virtual Environments
 .venv/
 venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 3. Local Environment Variables & Secrets
 .env
+.env.*
+!.env.example
+
+# 4. SQLite Databases & Local Data Stores
+notyet.db
 *.db
+*.sqlite
+*.sqlite3
 instance/
+
+# 5. Operating System Metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# 6. IDE / Editor Specific Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# 7. Logs & Temporary Test Caches
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 8. Local Nested Directory (Preserved locally, excluded from git)
+NOTYET/
