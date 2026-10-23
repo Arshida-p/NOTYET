@@ -18,8 +18,15 @@ from flask import (
     url_for,
     flash,
     jsonify,
+    session,
 )
 from database import get_db, close_db, init_db
+from validation_service import (
+    get_validated_needs,
+    get_validations_by_need_ids,
+    get_all_validations_for_need,
+    validate_need_entry,
+)
 
 # Available Neighbourhood Categories (Shared taxonomy across all 4 features)
 CATEGORIES = [
@@ -160,88 +167,108 @@ def create_app():
         )
 
     # ==========================================
-    # FEATURE 3: COMMUNITY VALIDATION (Scaffolded Route)
+    # FEATURE 3: COMMUNITY VALIDATION (Member 3)
     # ==========================================
     @app.route("/validation", methods=["GET"])
     def community_validation():
         """
-        Feature 3 Scaffold:
-        Allows residents to browse needs and upvote / validate them ("I need this too!").
-        Team Member Notes:
-        - Teammate can implement sorting (most upvoted vs. recent), search bar, and comment threads.
+        Community Validation Hub:
+        Allows residents to browse unmet needs with search, category filtering,
+        neighborhood filtering, and sorting, and validate them with optional testimonials.
         """
         db = get_db()
-        selected_category = request.args.get("category", "")
-        selected_neighborhood = request.args.get("neighborhood", "")
+        selected_category = request.args.get("category", "").strip()
+        selected_neighborhood = request.args.get("neighborhood", "").strip()
+        search_query = request.args.get("q", "").strip()
+        sort_by = request.args.get("sort", "popular").strip()
 
-        query = "SELECT * FROM needs WHERE status = 'open'"
-        params = []
+        # Fetch needs matching search/filter/sort parameters
+        needs = get_validated_needs(
+            db,
+            category=selected_category,
+            neighborhood=selected_neighborhood,
+            search_query=search_query,
+            sort_by=sort_by,
+        )
 
-        if selected_category:
-            query += " AND category = ?"
-            params.append(selected_category)
-        if selected_neighborhood:
-            query += " AND neighborhood LIKE ?"
-            params.append(f"%{selected_neighborhood}%")
-
-        query += " ORDER BY validation_count DESC, created_at DESC"
-
-        needs = db.execute(query, params).fetchall()
+        # Fetch recent neighbor testimonials/reasons for the displayed needs
+        need_ids = [need["id"] for need in needs]
+        validations_map = get_validations_by_need_ids(db, need_ids)
 
         # Fetch distinct neighborhoods for filter dropdown
         neighborhoods = [
             row[0]
             for row in db.execute(
-                "SELECT DISTINCT neighborhood FROM needs WHERE neighborhood IS NOT NULL ORDER BY neighborhood ASC"
+                "SELECT DISTINCT neighborhood FROM needs WHERE neighborhood IS NOT NULL AND neighborhood != '' ORDER BY neighborhood ASC"
             ).fetchall()
         ]
+
+        # Get list of already validated need IDs for duplicate vote prevention
+        user_validated_ids = session.get("validated_needs", [])
 
         return render_template(
             "validation.html",
             active_page="validation",
             needs=needs,
+            validations_map=validations_map,
             categories=CATEGORIES,
             neighborhoods=neighborhoods,
             selected_category=selected_category,
             selected_neighborhood=selected_neighborhood,
+            search_query=search_query,
+            sort_by=sort_by,
+            user_validated_ids=user_validated_ids,
         )
 
     @app.route("/validate/<int:need_id>", methods=["POST"])
     def validate_need_action(need_id):
         """
         Endpoint for community upvoting / validating a specific need.
+        Supports duplicate vote prevention via session, records optional support reasons,
+        and returns JSON for AJAX or redirects for standard form submissions.
         """
         db = get_db()
-        need = db.execute(
-            "SELECT * FROM needs WHERE id = ?", (need_id,)
-        ).fetchone()
-
-        if not need:
-            flash("The requested need could not be found.", "error")
-            return redirect(url_for("community_validation"))
-
-        supporter_name = (
-            request.form.get("supporter_name", "").strip()
-            or "Supportive Neighbour"
-        )
+        supporter_name = request.form.get("supporter_name", "").strip()
         support_reason = request.form.get("support_reason", "").strip()
 
-        # Increment count and record validation log
-        db.execute(
-            "UPDATE needs SET validation_count = validation_count + 1 WHERE id = ?",
-            (need_id,),
+        result = validate_need_entry(
+            db, need_id, supporter_name, support_reason, session
         )
-        db.execute(
-            "INSERT INTO validations (need_id, supporter_name, support_reason) VALUES (?, ?, ?)",
-            (need_id, supporter_name, support_reason),
-        )
-        db.commit()
 
-        flash(
-            f"You successfully validated '{need['title']}'! Local demand increased.",
-            "success",
+        # Check if client requested JSON (AJAX)
+        is_ajax = (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.is_json
+            or "application/json" in request.accept_mimetypes
         )
+
+        if is_ajax:
+            status_code = (
+                200
+                if result["success"]
+                else (400 if result.get("status") == "already_validated" else 404)
+            )
+            return jsonify(result), status_code
+
+        # Standard HTML form submit fallback
+        if result["success"]:
+            flash(result["message"], "success")
+        elif result.get("status") == "already_validated":
+            flash(result["message"], "info")
+        else:
+            flash(result["message"], "error")
+
         return redirect(url_for("community_validation"))
+
+    @app.route("/api/need/<int:need_id>/validations", methods=["GET"])
+    def get_need_validations_api(need_id):
+        """
+        API endpoint returning all testimonials / support reasons for a specific need.
+        Used for the 'View neighbor stories' modal.
+        """
+        db = get_db()
+        validations = get_all_validations_for_need(db, need_id)
+        return jsonify(validations)
 
     # ==========================================
     # FEATURE 4: BUSINESS OPPORTUNITIES (Scaffolded Route)
