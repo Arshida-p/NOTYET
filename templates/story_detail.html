@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ story.title }} | Case Study | NOTYET{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_stories.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section-spacing" style="margin-top: 1rem;">
+  <div class="story-detail-wrapper">
+
+    <!-- Navigation Breadcrumb / Back Link -->
+    <a href="{{ url_for('success_stories') }}" class="back-link">
+      &larr; Back to all Success Stories
+    </a>
+
+    <div class="story-detail-card">
+
+      <!-- Demo Data Banner if applicable -->
+      {% if story.is_demo %}
+        <div class="demo-detail-banner">
+          <span style="font-size: 1.3rem;">🏷️</span>
+          <div>
+            <strong style="color: #fbbf24;">Demonstration Case Study:</strong>
+            <p style="margin-top: 0.2rem;">
+              This record is illustrative demonstration data designed to showcase the complete workflow of a resolved community need on NOTYET. Genuine neighbourhood completions will populate this space as local initiatives launch.
+            </p>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Story Metadata Badges -->
+      <div class="story-detail-meta">
+        <span class="category-tag">{{ story.category }}</span>
+        <span class="location-tag">📍 {{ story.neighborhood }}</span>
+        <span class="badge-completed">✓ {{ story.status|capitalize }}</span>
+        {% if story.is_demo %}
+          <span class="badge-demo">🏷️ DEMO DATA</span>
+        {% endif %}
+      </div>
+
+      <!-- Main Headline -->
+      <h1 class="story-detail-title">{{ story.title }}</h1>
+
+      <!-- Key Facts Summary Grid -->
+      <div class="story-detail-stats">
+        <div class="detail-stat-item">
+          <span class="detail-stat-label">Project Status</span>
+          <span class="detail-stat-val" style="color: #34d399;">✓ {{ story.status|capitalize }}</span>
+        </div>
+        <div class="detail-stat-item">
+          <span class="detail-stat-label">Resolved By</span>
+          <span class="detail-stat-val" style="font-size: 1rem;">{{ story.business_or_initiator }}</span>
+        </div>
+        <div class="detail-stat-item">
+          <span class="detail-stat-label">Neighbourhood</span>
+          <span class="detail-stat-val" style="font-size: 1rem;">{{ story.neighborhood }}</span>
+        </div>
+        <div class="detail-stat-item">
+          <span class="detail-stat-label">Date Completed</span>
+          <span class="detail-stat-val" style="font-size: 1rem;">{{ story.completed_date if story.completed_date else 'Recently' }}</span>
+        </div>
+      </div>
+
+      <!-- Narrative Section 1: The Original Problem -->
+      <div class="story-section">
+        <h3 class="story-section-title">
+          <span>⚠️</span> 1. The Original Neighbourhood Challenge
+        </h3>
+        <div class="story-section-body">
+          <p>{{ story.original_problem }}</p>
+          {% if linked_need %}
+            <p style="margin-top: 0.75rem; font-size: 0.88rem; color: var(--text-dim);">
+              <em>Originally filed as request #{{ linked_need.id }} by {{ linked_need.reporter_name }} on {{ linked_need.created_at[:10] }}.</em>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Narrative Section 2: Solution Provided -->
+      <div class="story-section">
+        <h3 class="story-section-title">
+          <span>💡</span> 2. The Solution Provided
+        </h3>
+        <div class="story-section-body">
+          <p>{{ story.solution_provided }}</p>
+        </div>
+      </div>
+
+      <!-- Narrative Section 3: Verified Community Impact -->
+      <div class="story-section">
+        <h3 class="story-section-title">
+          <span>📈</span> 3. Verified Community Impact
+        </h3>
+        <div class="story-section-body">
+          <div class="story-impact-box" style="margin-top: 0.5rem;">
+            <div class="impact-label">
+              <span>🎯</span> Key Measurable Outcomes
+            </div>
+            <p class="impact-text" style="font-size: 1.05rem;">
+              {{ story.impact_summary }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Narrative Section 4: Entrepreneurial Lessons -->
+      <div class="story-section">
+        <h3 class="story-section-title">
+          <span>🤝</span> 4. Why This Model Succeeded
+        </h3>
+        <div class="story-section-body">
+          <p>
+            By leveraging NOTYET's community validation mechanism, the provider had proof of demand before investing capital. Instead of guessing what the neighbourhood wanted, the venture tailored its hours, offerings, and location directly to verified resident feedback.
+          </p>
+        </div>
+      </div>
+
+      <!-- Bottom CTAs -->
+      <div style="border-top: 1px solid var(--border-subtle); padding-top: 1.75rem; margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+        <a href="{{ url_for('success_stories') }}" class="btn btn-outline btn-sm">
+          &larr; Back to Stories
+        </a>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="{{ url_for('business_opportunities') }}" class="btn btn-primary btn-sm">
+            💼 Discover Next Opportunity
+          </a>
+          <a href="{{ url_for('report_need') }}" class="btn btn-secondary btn-sm">
+            📢 Report a Need
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

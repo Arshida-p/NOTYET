@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block title %}Neighbourhood Success Stories & Resolved Needs | NOTYET{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_stories.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="section-spacing" style="margin-top: 1rem;">
+
+  <!-- Hero Header -->
+  <div class="stories-hero">
+    <div class="stories-hero-pill">
+      <span>🌱</span> Verified Community Solutions
+    </div>
+    <h1 style="font-size: 2.3rem; font-weight: 800; color: #fff; margin-bottom: 0.75rem;">
+      Neighbourhood Success Stories
+    </h1>
+    <p style="font-size: 1.05rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+      See how community needs discovered and validated on NOTYET became thriving local enterprises, non-profits, and resolved public amenities.
+    </p>
+
+    <!-- Impact Aggregate Pills -->
+    <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 0.75rem;">
+      <span class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: #a7f3d0; border-color: rgba(16, 185, 129, 0.4); padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+        ✓ {{ total_completed }} Needs Resolved
+      </span>
+      <span class="badge-tag" style="background: rgba(6, 182, 212, 0.15); color: #67e8f9; border-color: rgba(6, 182, 212, 0.4); padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+        📍 {{ neighborhoods_served }} Neighbourhoods Benefited
+      </span>
+      {% if demo_count > 0 %}
+        <span class="badge-tag" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); padding: 0.4rem 0.9rem; font-size: 0.85rem;" title="Includes illustrative examples for hackathon demonstration">
+          🏷️ {{ demo_count }} Demo Example(s) Included
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Category & Neighbourhood Filter Toolbar -->
+  <div class="dash-toolbar">
+    <form action="{{ url_for('success_stories') }}" method="GET" class="dash-filter-form">
+      <!-- Category Filter -->
+      <div class="filter-group">
+        <label for="filter-story-cat" class="filter-label">Filter by Category:</label>
+        <select name="category" id="filter-story-cat" class="filter-select" onchange="this.form.submit()">
+          <option value="">All Categories ({{ all_categories|length }})</option>
+          {% for cat in all_categories %}
+            <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>
+              {{ cat.icon }} {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Neighbourhood Filter -->
+      <div class="filter-group">
+        <label for="filter-story-neigh" class="filter-label">Neighbourhood:</label>
+        <select name="neighborhood" id="filter-story-neigh" class="filter-select" onchange="this.form.submit()">
+          <option value="">All Areas ({{ neighborhoods|length }})</option>
+          {% for n in neighborhoods %}
+            <option value="{{ n }}" {% if selected_neighborhood == n %}selected{% endif %}>
+              📍 {{ n }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-secondary btn-sm" style="padding: 0.5rem 1rem;">
+        Filter
+      </button>
+
+      {% if selected_category or selected_neighborhood %}
+        <a href="{{ url_for('success_stories') }}" class="btn-filter-reset">
+          Clear Filters
+        </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Success Stories Grid -->
+  {% if stories and stories|length > 0 %}
+    <div class="stories-grid">
+      {% for story in stories %}
+        <article class="story-card">
+          <!-- Card Header -->
+          <div>
+            <div class="story-header">
+              <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                <span class="category-tag">{{ story.category }}</span>
+                <span class="location-tag">📍 {{ story.neighborhood }}</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+                {% if story.is_demo %}
+                  <span class="badge-demo" title="Demonstration case study created to illustrate resolved project workflows.">
+                    🏷️ DEMO DATA
+                  </span>
+                {% endif %}
+                <span class="badge-completed">
+                  ✓ {{ story.status|capitalize }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Story Title -->
+            <h2 class="story-title">{{ story.title }}</h2>
+
+            <!-- Original Problem and Solution Narrative -->
+            <div class="story-narrative">
+              <div class="narrative-block problem-block">
+                <div class="narrative-label text-problem">
+                  <span>⚠️</span> Original Problem
+                </div>
+                <p class="narrative-text">{{ story.original_problem }}</p>
+              </div>
+
+              <div class="narrative-block solution-block">
+                <div class="narrative-label text-solution">
+                  <span>💡</span> Solution Provided
+                </div>
+                <p class="narrative-text">{{ story.solution_provided }}</p>
+              </div>
+            </div>
+
+            <!-- Measured Community Impact -->
+            <div class="story-impact-box">
+              <div class="impact-label">
+                <span>📈</span> Community Impact
+              </div>
+              <p class="impact-text">{{ story.impact_summary }}</p>
+            </div>
+          </div>
+
+          <!-- Card Footer -->
+          <div class="story-footer">
+            <div>
+              <div class="story-initiator">
+                Initiative: <strong>{{ story.business_or_initiator if story.business_or_initiator else 'Community Coalition' }}</strong>
+              </div>
+              <div class="story-date">
+                Resolved: {{ story.completed_date if story.completed_date else 'Recently Completed' }}
+              </div>
+            </div>
+            <a href="{{ url_for('success_story_detail', story_id=story.id) }}" class="btn-story-detail">
+              <span>View Details</span> &rarr;
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Honest Empty State -->
+    <div class="empty-state-card">
+      <div class="empty-state-icon">🌱</div>
+      <h3 class="empty-state-title">No Completed Projects Found</h3>
+      <p class="empty-state-text">
+        {% if selected_category or selected_neighborhood %}
+          No resolved community projects match your selected filter criteria. Try resetting filters to view all recorded case studies.
+        {% else %}
+          Neighbourhood needs are currently gathering community validation and entrepreneur interest. As businesses and local groups launch solutions, verified case studies will be documented here.
+        {% endif %}
+      </p>
+      <div class="empty-state-actions">
+        {% if selected_category or selected_neighborhood %}
+          <a href="{{ url_for('success_stories') }}" class="btn btn-secondary">
+            Reset Filters
+          </a>
+        {% endif %}
+        <a href="{{ url_for('business_opportunities') }}" class="btn btn-primary">
+          💼 Explore Open Opportunities
+        </a>
+        <a href="{{ url_for('report_need') }}" class="btn btn-secondary">
+          📢 Report an Unmet Need
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+</section>
+{% endblock %}

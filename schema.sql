@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS needs (
     validation_count INTEGER DEFAULT 1,
     status TEXT DEFAULT 'open', -- 'open', 'in_discussion', 'met'
     reporter_name TEXT DEFAULT 'Anonymous Resident',
+    willingness_to_pay TEXT DEFAULT NULL, -- Optional resident budget / price expectation
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -36,7 +37,29 @@ CREATE TABLE IF NOT EXISTS business_leads (
     FOREIGN KEY (need_id) REFERENCES needs(id) ON DELETE CASCADE
 );
 
--- Helpful index for fast lookups by neighborhood and category
+-- 4. Completed Success Stories Table (For Feature: Success Stories)
+CREATE TABLE IF NOT EXISTS success_stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    need_id INTEGER,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL,
+    neighborhood TEXT NOT NULL,
+    original_problem TEXT NOT NULL,
+    solution_provided TEXT NOT NULL,
+    impact_summary TEXT NOT NULL,
+    business_or_initiator TEXT,
+    completed_date DATE,
+    status TEXT DEFAULT 'completed', -- 'completed', 'resolved'
+    is_demo BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (need_id) REFERENCES needs(id) ON DELETE SET NULL
+);
+
+-- Helpful indexes for fast lookups
 CREATE INDEX IF NOT EXISTS idx_needs_neighborhood ON needs(neighborhood);
 CREATE INDEX IF NOT EXISTS idx_needs_category ON needs(category);
 CREATE INDEX IF NOT EXISTS idx_needs_status ON needs(status);
+CREATE INDEX IF NOT EXISTS idx_stories_category ON success_stories(category);
+CREATE INDEX IF NOT EXISTS idx_stories_neighborhood ON success_stories(neighborhood);
+CREATE INDEX IF NOT EXISTS idx_stories_status ON success_stories(status);
+

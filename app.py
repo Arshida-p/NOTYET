@@ -241,6 +241,7 @@ def create_app():
             neighborhood = request.form.get("neighborhood", "").strip()
             zip_code = request.form.get("zip_code", "").strip()
             reporter_name = request.form.get("reporter_name", "").strip() or "Anonymous Resident"
+            willingness_to_pay = request.form.get("willingness_to_pay", "").strip() or None
 
             # Basic input validation
             if not title or not description or not category or not neighborhood:
@@ -298,8 +299,8 @@ def create_app():
             db = get_db()
             db.execute(
                 """
-                INSERT INTO needs (title, description, category, neighborhood, zip_code, validation_count, status, reporter_name)
-                VALUES (?, ?, ?, ?, ?, 1, 'open', ?)
+                INSERT INTO needs (title, description, category, neighborhood, zip_code, validation_count, status, reporter_name, willingness_to_pay)
+                VALUES (?, ?, ?, ?, ?, 1, 'open', ?, ?)
                 """,
                 (
                     title,
@@ -308,6 +309,7 @@ def create_app():
                     neighborhood,
                     zip_code,
                     reporter_name,
+                    willingness_to_pay,
                 ),
             )
             db.commit()
@@ -427,42 +429,132 @@ def create_app():
         return jsonify(validations)
 
     # ==========================================
-    # FEATURE 4: BUSINESS OPPORTUNITIES (Scaffolded Route)
+    # FEATURE 4: BUSINESS OPPORTUNITY DASHBOARD
     # ==========================================
     @app.route("/opportunities", methods=["GET"])
     def business_opportunities():
         """
-        Feature 4 Scaffold:
-        Translates validated community needs into actionable insights for local entrepreneurs.
-        Team Member Notes:
-        - Teammate can build analytics charts, export summaries, and business interest forms.
+        Feature A: Business Opportunity Dashboard
+        Displays neighborhood needs with the highest community support, identifies
+        repeated unmet needs/clusters, displays willingness-to-pay separately from support
+        counts (or shows explicit demand research notice), and provides category filters and sorting.
         """
         db = get_db()
+        selected_category = request.args.get("category", "").strip()
+        selected_neighborhood = request.args.get("neighborhood", "").strip()
+        selected_sort = request.args.get("sort", "support").strip()
 
         # Group unmet needs by category to highlight market demand
         category_demand = db.execute(
             """
             SELECT category, COUNT(*) as need_count, SUM(validation_count) as total_validations
             FROM needs
+            WHERE status IN ('open', 'in_discussion')
             GROUP BY category
             ORDER BY total_validations DESC, need_count DESC
             """
         ).fetchall()
 
-        # High priority opportunities (needs sorted by highest validation count)
-        top_opportunities = db.execute(
+        # Identify demand clusters (repeated unmet needs in the same neighborhood or high validation)
+        demand_clusters = db.execute(
             """
-            SELECT * FROM needs
-            ORDER BY validation_count DESC, created_at DESC
-            LIMIT 10
+            SELECT neighborhood, category, COUNT(*) as cluster_count, SUM(validation_count) as cluster_validations
+            FROM needs
+            WHERE status IN ('open', 'in_discussion')
+            GROUP BY neighborhood, category
+            ORDER BY cluster_validations DESC, cluster_count DESC
+            LIMIT 4
             """
         ).fetchall()
+
+        # Base query joining needs with business leads count
+        query = """
+            SELECT 
+                n.id, 
+                n.title, 
+                n.description, 
+                n.category, 
+                n.neighborhood, 
+                n.zip_code, 
+                n.validation_count, 
+                n.status, 
+                n.reporter_name, 
+                n.willingness_to_pay,
+                n.created_at,
+                COUNT(b.id) AS lead_count
+            FROM needs n
+            LEFT JOIN business_leads b ON n.id = b.need_id
+            WHERE n.status IN ('open', 'in_discussion')
+        """
+        params = []
+
+        if selected_category:
+            query += " AND n.category = ?"
+            params.append(selected_category)
+        if selected_neighborhood:
+            query += " AND n.neighborhood = ?"
+            params.append(selected_neighborhood)
+
+        query += " GROUP BY n.id"
+
+        # Apply sorting
+        if selected_sort == "newest":
+            query += " ORDER BY n.created_at DESC"
+        elif selected_sort == "interest":
+            query += " ORDER BY lead_count DESC, n.validation_count DESC"
+        else:  # default: support
+            query += " ORDER BY n.validation_count DESC, n.created_at DESC"
+
+        opportunities = db.execute(query, params).fetchall()
+
+        # Compute summary KPIs strictly from live database data
+        total_opps = db.execute(
+            "SELECT COUNT(*) FROM needs WHERE status IN ('open', 'in_discussion')"
+        ).fetchone()[0]
+
+        high_demand_count = db.execute(
+            "SELECT COUNT(*) FROM needs WHERE status IN ('open', 'in_discussion') AND validation_count >= 4"
+        ).fetchone()[0]
+
+        total_leads = db.execute("SELECT COUNT(*) FROM business_leads").fetchone()[0]
+
+        top_sector_row = db.execute(
+            """
+            SELECT category, SUM(validation_count) as total_val
+            FROM needs
+            WHERE status IN ('open', 'in_discussion')
+            GROUP BY category
+            ORDER BY total_val DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        top_sector = top_sector_row[0] if top_sector_row else "Various"
+
+        # Fetch distinct neighborhoods for filter dropdown
+        neighborhoods = [
+            row[0]
+            for row in db.execute(
+                "SELECT DISTINCT neighborhood FROM needs WHERE neighborhood IS NOT NULL AND neighborhood != '' ORDER BY neighborhood ASC"
+            ).fetchall()
+        ]
 
         return render_template(
             "opportunities.html",
             active_page="opportunities",
+            opportunities=opportunities,
             category_demand=category_demand,
-            top_opportunities=top_opportunities,
+            demand_clusters=demand_clusters,
+            kpis={
+                "total_opps": total_opps,
+                "high_demand_count": high_demand_count,
+                "total_leads": total_leads,
+                "top_sector": top_sector,
+            },
+            categories=CATEGORIES,
+            neighborhoods=neighborhoods,
+            selected_category=selected_category,
+            selected_neighborhood=selected_neighborhood,
+            selected_sort=selected_sort,
         )
 
     @app.route("/opportunities/<int:need_id>/interest", methods=["POST"])
@@ -496,6 +588,103 @@ def create_app():
             "success",
         )
         return redirect(url_for("business_opportunities"))
+
+    # ==========================================
+    # FEATURE B: SUCCESS STORIES
+    # ==========================================
+    @app.route("/success-stories", methods=["GET"])
+    def success_stories():
+        """
+        Feature B: Success Stories Page
+        Displays completed neighborhood projects and problems that have been resolved.
+        Shows only records with status 'completed' or 'resolved'.
+        Displays problem, solution, neighborhood, impact, and completion status.
+        Includes category filtering and clear labeling of any demonstration data.
+        """
+        db = get_db()
+        selected_category = request.args.get("category", "").strip()
+        selected_neighborhood = request.args.get("neighborhood", "").strip()
+
+        query = """
+            SELECT * FROM success_stories
+            WHERE status IN ('completed', 'resolved')
+        """
+        params = []
+
+        if selected_category:
+            query += " AND category = ?"
+            params.append(selected_category)
+        if selected_neighborhood:
+            query += " AND neighborhood = ?"
+            params.append(selected_neighborhood)
+
+        query += " ORDER BY completed_date DESC, created_at DESC"
+
+        stories = db.execute(query, params).fetchall()
+
+        # Fetch distinct neighborhoods for filter dropdown
+        neighborhoods = [
+            row[0]
+            for row in db.execute(
+                "SELECT DISTINCT neighborhood FROM success_stories WHERE neighborhood IS NOT NULL AND neighborhood != '' ORDER BY neighborhood ASC"
+            ).fetchall()
+        ]
+
+        # Aggregate counts for header badges
+        total_completed = db.execute(
+            "SELECT COUNT(*) FROM success_stories WHERE status IN ('completed', 'resolved')"
+        ).fetchone()[0]
+
+        demo_count = db.execute(
+            "SELECT COUNT(*) FROM success_stories WHERE status IN ('completed', 'resolved') AND is_demo = 1"
+        ).fetchone()[0]
+
+        neighborhoods_served = db.execute(
+            "SELECT COUNT(DISTINCT neighborhood) FROM success_stories WHERE status IN ('completed', 'resolved')"
+        ).fetchone()[0]
+
+        return render_template(
+            "stories.html",
+            active_page="stories",
+            stories=stories,
+            categories=CATEGORIES,
+            neighborhoods=neighborhoods,
+            selected_category=selected_category,
+            selected_neighborhood=selected_neighborhood,
+            total_completed=total_completed,
+            demo_count=demo_count,
+            neighborhoods_served=neighborhoods_served,
+        )
+
+    @app.route("/success-stories/<int:story_id>", methods=["GET"])
+    def success_story_detail(story_id):
+        """
+        Feature B Detail View:
+        Allows users to view deep-dive case study details for a resolved story.
+        """
+        db = get_db()
+        story = db.execute(
+            "SELECT * FROM success_stories WHERE id = ? AND status IN ('completed', 'resolved')",
+            (story_id,),
+        ).fetchone()
+
+        if not story:
+            flash("The requested success story could not be found or has not been marked resolved.", "error")
+            return redirect(url_for("success_stories"))
+
+        # If story is linked to a need, fetch that need for extra context
+        linked_need = None
+        if story["need_id"]:
+            linked_need = db.execute(
+                "SELECT * FROM needs WHERE id = ?", (story["need_id"],)
+            ).fetchone()
+
+        return render_template(
+            "story_detail.html",
+            active_page="stories",
+            story=story,
+            linked_need=linked_need,
+        )
 
     return app
 
