@@ -34,12 +34,58 @@ CATEGORIES = [
 ]
 
 
+def _load_env_if_present():
+    """
+    Safely loads key-value pairs from a local .env file if present,
+    without requiring third-party libraries. Existing environment variables
+    take precedence and will not be overwritten.
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.isfile(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, val = line.split("=", 1)
+                        key, val = key.strip(), val.strip()
+                        if key and key not in os.environ:
+                            os.environ[key] = val.strip("'\"")
+        except Exception:
+            pass
+
+
+# Attempt to read local .env if present
+_load_env_if_present()
+
+
 def create_app():
     """Application factory for the NOTYET Flask app."""
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = os.environ.get(
-        "SECRET_KEY", "notyet-hackathon-dev-key-2026"
-    )
+
+    # Environment detection
+    flask_env = os.environ.get("FLASK_ENV", os.environ.get("ENV", "development")).lower()
+    is_production = flask_env in ("production", "prod")
+
+    # Safe SECRET_KEY configuration
+    secret_key = os.environ.get("SECRET_KEY")
+    insecure_keys = {
+        "notyet-hackathon-dev-key-2026",
+        "change-this-to-a-secure-random-secret-key-in-production",
+        "your-secret-key-here",
+    }
+
+    if is_production:
+        if not secret_key or secret_key.strip() in insecure_keys:
+            raise RuntimeError(
+                "CRITICAL SECURITY CONFIGURATION ERROR: A strong, unique SECRET_KEY must "
+                "be set via environment variable in production mode. "
+                "Do not use default or placeholder keys in production."
+            )
+        app.config["SECRET_KEY"] = secret_key
+    else:
+        # Development fallback (safe for local development only)
+        app.config["SECRET_KEY"] = secret_key or "notyet-hackathon-dev-key-2026"
 
     # Register teardown to clean up SQLite connections
     app.teardown_appcontext(close_db)
@@ -56,6 +102,7 @@ def create_app():
     def inject_global_data():
         return {
             "all_categories": CATEGORIES,
+            "category_icons": {c["name"]: c["icon"] for c in CATEGORIES},
             "app_name": "NOTYET",
             "tagline": "Discover what your neighborhood is missing.",
         }
@@ -100,6 +147,75 @@ def create_app():
         )
 
     # ==========================================
+    # FEATURE: BROWSE COMMUNITY NEEDS
+    # ==========================================
+    @app.route("/needs", methods=["GET"])
+    @app.route("/browse", methods=["GET"])
+    def browse_needs():
+        """
+        Browse Community Needs:
+        Displays community needs dynamically from the SQLite database with filtering
+        by category, neighborhood, status, or search keywords using parameterized SQL.
+        """
+        db = get_db()
+        selected_category = request.args.get("category", "").strip()
+        selected_neighborhood = request.args.get("neighborhood", "").strip()
+        selected_status = request.args.get("status", "").strip()
+        search_query = request.args.get("q", "").strip()
+
+        # Base parameterized query
+        query = """
+            SELECT id, title, description, category, neighborhood, zip_code, validation_count, status, reporter_name, created_at
+            FROM needs
+            WHERE 1=1
+        """
+        params = []
+
+        if selected_category:
+            query += " AND category = ?"
+            params.append(selected_category)
+
+        if selected_neighborhood:
+            query += " AND neighborhood LIKE ?"
+            params.append(f"%{selected_neighborhood}%")
+
+        if selected_status:
+            query += " AND status = ?"
+            params.append(selected_status)
+
+        if search_query:
+            query += " AND (title LIKE ? OR description LIKE ? OR neighborhood LIKE ?)"
+            params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+
+        query += " ORDER BY created_at DESC"
+
+        needs = db.execute(query, params).fetchall()
+
+        # Fetch distinct neighborhoods for filter dropdown
+        neighborhoods = [
+            row[0]
+            for row in db.execute(
+                "SELECT DISTINCT neighborhood FROM needs WHERE neighborhood IS NOT NULL AND neighborhood != '' ORDER BY neighborhood ASC"
+            ).fetchall()
+        ]
+
+        # Total needs count in database for general platform statistics
+        total_count = db.execute("SELECT COUNT(*) FROM needs").fetchone()[0]
+
+        return render_template(
+            "needs.html",
+            active_page="browse",
+            needs=needs,
+            categories=CATEGORIES,
+            neighborhoods=neighborhoods,
+            selected_category=selected_category,
+            selected_neighborhood=selected_neighborhood,
+            selected_status=selected_status,
+            search_query=search_query,
+            total_count=total_count,
+        )
+
+    # ==========================================
     # FEATURE 2: REPORT A NEED (Scaffolded Route)
     # ==========================================
     @app.route("/report", methods=["GET", "POST"])
@@ -123,6 +239,46 @@ def create_app():
             if not title or not description or not category or not neighborhood:
                 flash(
                     "Please fill in all required fields (Title, Category, Neighborhood, and Description).",
+                    "error",
+                )
+                return render_template(
+                    "report.html",
+                    active_page="report",
+                    categories=CATEGORIES,
+                    form_data=request.form,
+                )
+
+            # Validate category against allowed CATEGORIES list
+            valid_categories = {cat["name"] for cat in CATEGORIES}
+            if category not in valid_categories:
+                flash(
+                    "Please select a valid category from the available options.",
+                    "error",
+                )
+                return render_template(
+                    "report.html",
+                    active_page="report",
+                    categories=CATEGORIES,
+                    form_data=request.form,
+                )
+
+            # Validate title length (5 to 100 characters)
+            if len(title) < 5 or len(title) > 100:
+                flash(
+                    "Need title must be between 5 and 100 characters.",
+                    "error",
+                )
+                return render_template(
+                    "report.html",
+                    active_page="report",
+                    categories=CATEGORIES,
+                    form_data=request.form,
+                )
+
+            # Validate description length (20 to 1,000 characters)
+            if len(description) < 20 or len(description) > 1000:
+                flash(
+                    "Description must be between 20 and 1,000 characters to provide sufficient context.",
                     "error",
                 )
                 return render_template(
@@ -322,5 +478,18 @@ init_db()
 app = create_app()
 
 if __name__ == "__main__":
-    # Host on 127.0.0.1:5000 in debug mode for development
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    flask_env = os.environ.get("FLASK_ENV", os.environ.get("ENV", "development")).lower()
+    is_prod = flask_env in ("production", "prod")
+
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", 5000))
+
+    # In production, debug mode must ALWAYS be disabled
+    if is_prod:
+        debug_mode = False
+    else:
+        # In development, default to True unless explicitly disabled (FLASK_DEBUG=0)
+        debug_flag = os.environ.get("FLASK_DEBUG", "1").lower()
+        debug_mode = debug_flag in ("1", "true", "yes")
+
+    app.run(host=host, port=port, debug=debug_mode)
