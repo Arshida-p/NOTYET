@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Community Validation Feed | NOTYET{% endblock %}
+
+{% block content %}
+<section class="section-spacing" style="margin-top: 1rem;">
+  <!-- Team Collaboration Scaffold Notice -->
+  <div class="roadmap-box">
+    <div class="roadmap-icon">👍</div>
+    <div class="roadmap-content">
+      <h4>Feature 3 Starter Scaffold: "Community Validation"</h4>
+      <p>
+        <strong>For the teammate building Feature 3:</strong> This feed renders all open needs from SQLite and includes a working validation action (<code>POST /validate/&lt;id&gt;</code>).
+        You can expand it with search indexing, sorting toggles (Most Validated, Newest), interactive comment threads, or anti-spam verification.
+      </p>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <h1>Community Validation Hub</h1>
+      <p class="section-subtitle">
+        Browse unmet neighbourhood requests and add your vote to validate local demand.
+      </p>
+    </div>
+    <a href="{{ url_for('report_need') }}" class="btn btn-primary btn-sm">
+      + Propose New Need
+    </a>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <form method="GET" action="{{ url_for('community_validation') }}" class="filter-bar">
+    <div class="filter-group">
+      <label for="filter-cat" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Category:</label>
+      <select id="filter-cat" name="category" class="form-control" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.name }}" {% if selected_category == cat.name %}selected{% endif %}>
+            {{ cat.icon }} {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="filter-neigh" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Area:</label>
+      <select id="filter-neigh" name="neighborhood" class="form-control" onchange="this.form.submit()">
+        <option value="">All Neighbourhoods</option>
+        {% for n in neighborhoods %}
+          <option value="{{ n }}" {% if selected_neighborhood == n %}selected{% endif %}>
+            {{ n }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {% if selected_category or selected_neighborhood %}
+      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary btn-sm" style="margin-left: auto;">
+        Clear Filters
+      </a>
+    {% endif %}
+  </form>
+
+  <!-- Needs Grid -->
+  {% if needs and needs|length > 0 %}
+    <div class="cards-grid">
+      {% for need in needs %}
+        <article class="need-card">
+          <div>
+            <div class="need-card-header">
+              <span class="category-tag">{{ need.category }}</span>
+              <span class="location-tag">📍 {{ need.neighborhood }}</span>
+            </div>
+            <h3 class="need-title">{{ need.title }}</h3>
+            <p class="need-desc">{{ need.description }}</p>
+          </div>
+
+          <div>
+            <div class="need-card-footer">
+              <span class="validation-counter">
+                <span>👍</span> {{ need.validation_count }} validations
+              </span>
+              
+              <form action="{{ url_for('validate_need_action', need_id=need.id) }}" method="POST" style="margin: 0;">
+                <input type="hidden" name="supporter_name" value="Neighbourhood Resident">
+                <button type="submit" class="btn btn-outline btn-sm">
+                  +1 I Need This Too
+                </button>
+              </form>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">
+      <div class="empty-box-icon">🔍</div>
+      <h3>No Needs Match Your Filter</h3>
+      <p>Try resetting the category or neighbourhood filter to see more community requests.</p>
+      <a href="{{ url_for('community_validation') }}" class="btn btn-secondary">Reset Filters</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

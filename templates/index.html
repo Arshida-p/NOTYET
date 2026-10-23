@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}NOTYET - Discover Unmet Neighbourhood Needs & Local Business Opportunities{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-pill">
+    <span class="dot"></span>
+    <span>Hyperlocal Demand Discovery Platform</span>
+  </div>
+  <h1 class="hero-title">
+    What your neighborhood needs, but doesn't have <span class="highlight">NOT YET.</span>
+  </h1>
+  <p class="hero-subtitle">
+    Residents voice missing services. Neighbors validate the real local demand. Enterprising local businesses discover ready-to-launch opportunities backed by verified community interest.
+  </p>
+  <div class="hero-actions">
+    <a href="{{ url_for('report_need') }}" class="btn btn-primary">
+      <span>📢</span> Report What's Missing
+    </a>
+    <a href="{{ url_for('community_validation') }}" class="btn btn-secondary">
+      <span>👍</span> Validate Community Needs
+    </a>
+    <a href="{{ url_for('business_opportunities') }}" class="btn btn-outline">
+      <span>💼</span> Business Opportunities
+    </a>
+  </div>
+</section>
+
+<!-- Genuine Metrics Strip (Strictly computed from SQLite data) -->
+<section class="metrics-strip" aria-label="Live Platform Metrics">
+  <div class="metric-card">
+    <div class="metric-icon" style="color: #10b981;">📋</div>
+    <div class="metric-data">
+      <span class="metric-value">{{ total_needs }}</span>
+      <span class="metric-label">Needs Recorded</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon" style="color: #06b6d4;">📍</div>
+    <div class="metric-data">
+      <span class="metric-value">{{ total_neighborhoods }}</span>
+      <span class="metric-label">Active Neighborhoods</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon" style="color: #f59e0b;">🤝</div>
+    <div class="metric-data">
+      <span class="metric-value">{{ total_validations }}</span>
+      <span class="metric-label">Neighbor Validations</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-icon" style="color: #6366f1;">🏷️</div>
+    <div class="metric-data">
+      <span class="metric-value">{{ all_categories|length }}</span>
+      <span class="metric-label">Service Categories</span>
+    </div>
+  </div>
+</section>
+
+<!-- Dual Pillars: Residents & Businesses -->
+<section class="pillars-grid">
+  <!-- Pillar 1: For Residents -->
+  <div class="pillar-card pillar-residents">
+    <div class="pillar-header">
+      <div class="pillar-icon-box" style="color: #10b981;">🏡</div>
+      <h2 class="pillar-title">For Residents &amp; Neighbors</h2>
+    </div>
+    <p class="pillar-desc">
+      Tired of driving 20 minutes for everyday essentials? Turn neighborly frustrations into actionable signals.
+    </p>
+    <ul class="pillar-points">
+      <li><span>✓</span> Voice unmet needs: from late-night pharmacies to specialty bakeries.</li>
+      <li><span>✓</span> Endorse needs proposed by neighbors to signal real collective demand.</li>
+      <li><span>✓</span> Watch when local founders and business owners step forward to help.</li>
+    </ul>
+    <a href="{{ url_for('report_need') }}" class="btn btn-primary btn-sm">
+      Voice a Missing Need &rarr;
+    </a>
+  </div>
+
+  <!-- Pillar 2: For Local Businesses -->
+  <div class="pillar-card pillar-business">
+    <div class="pillar-header">
+      <div class="pillar-icon-box" style="color: #6366f1;">🚀</div>
+      <h2 class="pillar-title">For Local Businesses &amp; Founders</h2>
+    </div>
+    <p class="pillar-desc">
+      Stop guessing where to open your next store or what service to launch. Build where verified customers are waiting.
+    </p>
+    <ul class="pillar-points">
+      <li><span>✓</span> Discover market gaps backed by upvoted neighborhood demand.</li>
+      <li><span>✓</span> Filter by specific zip codes and service categories.</li>
+      <li><span>✓</span> Express commercial interest and build an audience before opening.</li>
+    </ul>
+    <a href="{{ url_for('business_opportunities') }}" class="btn btn-secondary btn-sm">
+      Explore High-Demand Gaps &rarr;
+    </a>
+  </div>
+</section>
+
+<!-- Recent Community Needs Grid -->
+<section class="section-spacing">
+  <div class="section-header">
+    <div class="section-title-wrap">
+      <h2>Recent Neighbourhood Needs</h2>
+      <p class="section-subtitle">Real community voices calling for local services.</p>
+    </div>
+    <a href="{{ url_for('community_validation') }}" class="btn btn-secondary btn-sm">
+      View All Needs &rarr;
+    </a>
+  </div>
+
+  {% if recent_needs and recent_needs|length > 0 %}
+    <div class="cards-grid">
+      {% for need in recent_needs %}
+        <article class="need-card">
+          <div>
+            <div class="need-card-header">
+              <span class="category-tag">{{ need.category }}</span>
+              <span class="location-tag">📍 {{ need.neighborhood }}</span>
+            </div>
+            <h3 class="need-title">{{ need.title }}</h3>
+            <p class="need-desc">{{ need.description }}</p>
+          </div>
+          <div class="need-card-footer">
+            <span class="validation-counter">
+              <span>👍</span> {{ need.validation_count }} validations
+            </span>
+            <a href="{{ url_for('community_validation') }}" class="btn btn-outline btn-sm">
+              Support Need
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">
+      <div class="empty-box-icon">🌱</div>
+      <h3>No Needs Reported Yet</h3>
+      <p>Be the first in your community to point out an unmet local service or missing shop!</p>
+      <a href="{{ url_for('report_need') }}" class="btn btn-primary">Report a Need Now</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

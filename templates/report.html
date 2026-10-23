@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Report an Unmet Need | NOTYET{% endblock %}
+
+{% block content %}
+<section class="section-spacing" style="margin-top: 1rem;">
+  <!-- Team Collaboration Scaffold Notice -->
+  <div class="roadmap-box">
+    <div class="roadmap-icon">🛠️</div>
+    <div class="roadmap-content">
+      <h4>Feature 2 Starter Scaffold: "Report a Need"</h4>
+      <p>
+        <strong>For the teammate building Feature 2:</strong> This form connects directly to SQLite via <code>/report</code> in <code>app.py</code>. 
+        You can expand it with image uploads, map pins, urgency sliders, or validation rules.
+      </p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h1 style="font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">
+        Voice a Missing Community Need
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        What service, store, or facility is your neighbourhood desperately lacking?
+      </p>
+    </div>
+
+    <form action="{{ url_for('report_need') }}" method="POST">
+      <!-- Title -->
+      <div class="form-group">
+        <label for="title" class="form-label">Need Title <span class="req">*</span></label>
+        <input 
+          type="text" 
+          id="title" 
+          name="title" 
+          class="form-control" 
+          placeholder="e.g., Late-night walk-in pharmacy, Fresh organic grocery store" 
+          required 
+          value="{{ form_data.title if form_data else '' }}"
+        >
+        <p class="form-hint">Summarize the missing store or service in one clear sentence.</p>
+      </div>
+
+      <!-- Category & Neighborhood Row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category" class="form-label">Category <span class="req">*</span></label>
+          <select id="category" name="category" class="form-control" required>
+            <option value="" disabled {% if not form_data or not form_data.category %}selected{% endif %}>Select category...</option>
+            {% for cat in categories %}
+              <option value="{{ cat.name }}" {% if form_data and form_data.category == cat.name %}selected{% endif %}>
+                {{ cat.icon }} {{ cat.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="neighborhood" class="form-label">Neighbourhood / Area <span class="req">*</span></label>
+          <input 
+            type="text" 
+            id="neighborhood" 
+            name="neighborhood" 
+            class="form-control" 
+            placeholder="e.g., Maplewood Heights, Downtown West" 
+            required 
+            value="{{ form_data.neighborhood if form_data else '' }}"
+          >
+        </div>
+      </div>
+
+      <!-- Zip code & Reporter -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zip_code" class="form-label">Zip / Postal Code (Optional)</label>
+          <input 
+            type="text" 
+            id="zip_code" 
+            name="zip_code" 
+            class="form-control" 
+            placeholder="e.g., 94016" 
+            value="{{ form_data.zip_code if form_data else '' }}"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="reporter_name" class="form-label">Your Name or Alias (Optional)</label>
+          <input 
+            type="text" 
+            id="reporter_name" 
+            name="reporter_name" 
+            class="form-control" 
+            placeholder="e.g., Resident on 4th Ave" 
+            value="{{ form_data.reporter_name if form_data else '' }}"
+          >
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label for="description" class="form-label">Why is this needed? Describe the current struggle <span class="req">*</span></label>
+        <textarea 
+          id="description" 
+          name="description" 
+          class="form-control" 
+          placeholder="Explain what residents currently have to do (e.g., drive 20 minutes away, pay high delivery fees) and who benefits most..." 
+          required
+        >{{ form_data.description if form_data else '' }}</textarea>
+        <p class="form-hint">Specific details help neighbors validate and help local businesses see the commercial opportunity.</p>
+      </div>
+
+      <!-- Submit button -->
+      <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Publish Community Need</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

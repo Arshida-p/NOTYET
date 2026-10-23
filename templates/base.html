@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NOTYET - Discover unmet neighborhood needs, validate community demand, and empower local business entrepreneurs.">
+  <title>{% block title %}NOTYET | Bridging Neighbourhood Needs & Business Opportunities{% endblock %}</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Shared Application Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+  <!-- Responsive Navigation Header -->
+  <header class="site-header">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="brand-logo" aria-label="NOTYET Home">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-name">NOTYET</span>
+        <span class="badge-tag">HACKATHON</span>
+      </a>
+
+      <!-- Mobile Menu Button -->
+      <button class="mobile-toggle" id="mobileMenuToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        ☰
+      </button>
+
+      <!-- Navigation Links -->
+      <nav class="nav-menu" id="navMenu">
+        <a href="{{ url_for('index') }}" class="nav-link {% if active_page == 'home' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('report_need') }}" class="nav-link {% if active_page == 'report' %}active{% endif %}">Report a Need</a>
+        <a href="{{ url_for('community_validation') }}" class="nav-link {% if active_page == 'validation' %}active{% endif %}">Community Validation</a>
+        <a href="{{ url_for('business_opportunities') }}" class="nav-link {% if active_page == 'opportunities' %}active{% endif %}">Business Opportunities</a>
+        <a href="{{ url_for('report_need') }}" class="nav-cta-btn">
+          <span>+</span> Report Need
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-wrapper">
+    <!-- Flashed Alert Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }}" role="alert">
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close" aria-label="Dismiss alert">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page Content Block -->
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <div class="brand-logo">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-name">NOTYET</span>
+        </div>
+        <p>A community-driven demand intelligence engine connecting unmet neighborhood desires with entrepreneurial solutions.</p>
+      </div>
+
+      <div>
+        <h4 class="footer-title">Platform Features</h4>
+        <ul class="footer-links">
+          <li><a href="{{ url_for('index') }}">Homepage</a></li>
+          <li><a href="{{ url_for('report_need') }}">Feature: Report a Need</a></li>
+          <li><a href="{{ url_for('community_validation') }}">Feature: Community Validation</a></li>
+          <li><a href="{{ url_for('business_opportunities') }}">Feature: Business Opportunities</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="footer-title">Hackathon Stack</h4>
+        <ul class="footer-links">
+          <li><span style="color: #a7f3d0;">Backend:</span> Python 3 &amp; Flask</li>
+          <li><span style="color: #a7f3d0;">Database:</span> SQLite (Safe Schema)</li>
+          <li><span style="color: #a7f3d0;">Frontend:</span> Vanilla CSS &amp; HTML5</li>
+          <li><span style="color: #a7f3d0;">Status:</span> Shared Foundation</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>Built for the Hackathon &bull; NOTYET Foundation Prototype</span>
+      <span>Safe SQLite Persistence Active</span>
+    </div>
+  </footer>
+
+  <!-- Shared JavaScript -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
